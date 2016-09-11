@@ -19,6 +19,7 @@
 set -o nounset                              # Treat unset variables as an error
 
 dir="/var/lib/transmission-daemon"
+datadir="/data"
 
 ### timezone: Set the timezone for the container
 # Arguments:
@@ -82,9 +83,9 @@ done
 
 watchdir=$(awk -F'=' '/"watch-dir"/ {print $2}' $dir/info/settings.json |
             sed 's/[,"]//g')
-[[ -d $dir/downloads ]] || mkdir -p $dir/downloads
-[[ -d $dir/incomplete ]] || mkdir -p $dir/incomplete
-[[ -d $dir/info/blocklists ]] || mkdir -p $dir/info/blocklists
+[[ -d $datadir/downloads ]] || mkdir -p $datadir/downloads
+[[ -d $datadir/incomplete ]] || mkdir -p $datadir/incomplete
+[[ -d $datadir/info/blocklists ]] || mkdir -p $datadir/info/blocklists
 [[ $watchdir && ! -d $watchdir ]] && mkdir -p $watchdir
 
 chown -Rh debian-transmission. $dir 2>&1 | grep -iv 'Read-only' || :
@@ -97,13 +98,13 @@ elif [[ $# -ge 1 ]]; then
 elif ps -ef | egrep -v 'grep|transmission.sh' | grep -q transmission; then
     echo "Service already running, please restart container to apply changes"
 else
-    if [[ -z $(find $dir/info/blocklists/bt_level1 -mmin -1080 2>&-) && \
+    if [[ -z $(find $datadir/info/blocklists/bt_level1 -mmin -1080 2>&-) && \
                 "${BLOCKLIST:-""}" != "no" ]]; then
         # Initialize blocklist
         url='http://list.iblocklist.com'
         curl -Ls "$url"'/?list=bt_level1&fileformat=p2p&archiveformat=gz' |
-                    gzip -cd >$dir/info/blocklists/bt_level1
-        chown debian-transmission. $dir/info/blocklists/bt_level1
+                    gzip -cd >$datadir/info/blocklists/bt_level1
+        chown debian-transmission. $datadir/info/blocklists/bt_level1
     fi
     exec su -l debian-transmission -s /bin/bash -c "exec transmission-daemon \
                 --config-dir $dir/info --blocklist --encryption-preferred \
